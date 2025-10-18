@@ -212,4 +212,4 @@ mv -f "$tmp"/OneUI-AB-"$date"-CRYZUEZIN.img.gz "$ajax"
 rm -rf "$tmp"
 echo " "
 
-echo "- Ready! Now you can send the Image to your testers, it is located: "$ajax"
+echo "- Ready! Now you can send the Image to your testers, it is located: $ajax"

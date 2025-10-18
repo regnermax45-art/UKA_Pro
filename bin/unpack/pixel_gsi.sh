@@ -14,10 +14,10 @@ debloat="$uka"/bin/debloat
 phh="$uka"/bin/phh
 
 # Pixel 7 Pro specific variables
-DEVICE_CODENAME="cheetah"
-DEVICE_NAME="Pixel 7 Pro"
-CHIPSET="tensor_gs201"
-ANDROID_VERSION="13"
+export DEVICE_CODENAME="cheetah"
+export DEVICE_NAME="Pixel 7 Pro"
+export CHIPSET="tensor_gs201"
+export ANDROID_VERSION="13"
 
 echo -en "\E[32;1m"
 echo "      -------------------------"
@@ -30,7 +30,7 @@ echo -en "\E[37;1m"
 echo " "
 
 # Check for GSI image
-if [ ! -f ""$uka"/system.img" ] && [ ! -f ""$uka"/system.img.raw" ] && [ ! -f ""$uka"/payload.bin" ]; then
+if [ ! -f "$uka/system.img" ] && [ ! -f "$uka/system.img.raw" ] && [ ! -f "$uka/payload.bin" ]; then
     echo "❌ No GSI image found!"
     echo "Please place one of the following in $uka:"
     echo "  - system.img (GSI system image)"
@@ -41,7 +41,7 @@ fi
 
 # Create working directories
 mkdir -p "$tmp"/pixel_gsi
-mkdir -p $editor/pixel_modifications
+mkdir -p "$editor/pixel_modifications"
 mkdir -p "$tmp"/pixel_gsi/system
 mkdir -p "$tmp"/pixel_gsi/vendor
 mkdir -p "$tmp"/pixel_gsi/product
@@ -49,31 +49,31 @@ mkdir -p "$tmp"/pixel_gsi/product
 echo "🔧 Setting up Pixel 7 Pro GSI environment..."
 
 # Extract payload.bin if present
-if [ -f ""$uka"/payload.bin" ]; then
+if [ -f "$uka/payload.bin" ]; then
     echo "📦 Extracting payload.bin..."
-    cd "$tmp"/pixel_gsi
-    python3 $pybin/payload_dumper.py "$uka"/payload.bin
+    cd "$tmp"/pixel_gsi || exit
+    python3 "$pybin"/payload_dumper.py "$uka"/payload.bin
     
     # Move extracted images
     [ -f system.img ] && mv system.img "$tmp"/pixel_gsi/
     [ -f vendor.img ] && mv vendor.img "$tmp"/pixel_gsi/
     [ -f product.img ] && mv product.img "$tmp"/pixel_gsi/
     [ -f boot.img ] && mv boot.img "$tmp"/pixel_gsi/
-    cd $uka
+    cd "$uka" || exit
 fi
 
 # Mount system image
-if [ -f ""$uka"/system.img" ] || [ -f ""$tmp"/pixel_gsi/system.img" ]; then
-    SYSTEM_IMG=""$uka"/system.img"
-    [ -f ""$tmp"/pixel_gsi/system.img" ] && SYSTEM_IMG=""$tmp"/pixel_gsi/system.img"
+if [ -f "$uka/system.img" ] || [ -f "$tmp/pixel_gsi/system.img" ]; then
+    SYSTEM_IMG="$uka/system.img"
+    [ -f "$tmp/pixel_gsi/system.img" ] && SYSTEM_IMG="$tmp/pixel_gsi/system.img"
     
     echo "🗂️  Mounting system image..."
     
     # Check if it's sparse
-    if "$bin"/file $SYSTEM_IMG | grep -q "sparse"; then
+    if "$bin"/file "$SYSTEM_IMG" | grep -q "sparse"; then
         echo "Converting sparse image..."
-        "$bin"/simg2img $SYSTEM_IMG "$tmp"/pixel_gsi/system_raw.img
-        SYSTEM_IMG=""$tmp"/pixel_gsi/system_raw.img"
+        "$bin"/simg2img "$SYSTEM_IMG" "$tmp"/pixel_gsi/system_raw.img
+        SYSTEM_IMG="$tmp/pixel_gsi/system_raw.img"
     fi
     
     # Mount the image
@@ -82,10 +82,10 @@ if [ -f ""$uka"/system.img" ] || [ -f ""$tmp"/pixel_gsi/system.img" ]; then
         echo "Trying alternative mount method..."
         "$bin"/mount.erofs $SYSTEM_IMG "$tmp"/pixel_gsi/system_mount 2>/dev/null || {
             echo "Using 7z extraction..."
-            cd "$tmp"/pixel_gsi
-            "$bin"/7z x $SYSTEM_IMG -osystem_extracted/
+            cd "$tmp"/pixel_gsi || exit
+            "$bin"/7z x "$SYSTEM_IMG" -osystem_extracted/
             ln -sf system_extracted system_mount
-            cd $uka
+            cd "$uka" || exit
         }
     }
 fi
@@ -137,11 +137,11 @@ echo "vendor.powerhal.init=1" >> system/build.prop
 echo "✅ Pixel 7 Pro modifications applied!"
 EOF
 
-chmod +x $editor/pixel_modifications/pixel7pro_overlay.sh
+chmod +x "$editor/pixel_modifications/pixel7pro_overlay.sh"
 
 # Apply PHH GSI patches for Pixel compatibility
 echo "🔧 Applying PHH GSI patches..."
-if [ -d ""$tmp"/pixel_gsi/system_mount" ]; then
+if [ -d "$tmp/pixel_gsi/system_mount" ]; then
     # Copy system to writable location
     echo "Creating writable system copy..."
     cp -r "$tmp"/pixel_gsi/system_mount/* "$tmp"/pixel_gsi/system/ 2>/dev/null || {
@@ -163,15 +163,15 @@ if [ -d ""$tmp"/pixel_gsi/system_mount" ]; then
     # Apply PHH treble patches
     if [ -f "$phh/apply_patches.sh" ]; then
         echo "🔧 Applying PHH Treble patches..."
-        sh $phh/apply_patches.sh cheetah
+        sh "$phh/apply_patches.sh" cheetah
     fi
     
-    cd $uka
+    cd "$uka" || exit
 fi
 
 # Repack system image
 echo "📦 Repacking system image for Pixel 7 Pro..."
-cd "$tmp"/pixel_gsi
+cd "$tmp"/pixel_gsi || exit
 
 # Calculate new image size
 SYSTEM_SIZE=$(du -sb system | cut -f1)
@@ -184,7 +184,7 @@ echo "Creating new system.img (${IMAGE_SIZE} bytes)..."
 # Copy to output
 cp system_new.img "$uka"/system_pixel7pro_gsi.img
 
-cd $uka
+cd "$uka" || exit
 
 # Cleanup
 echo "🧹 Cleaning up..."
@@ -203,4 +203,3 @@ echo "2. fastboot flash system system_pixel7pro_gsi.img"
 echo "3. fastboot -w (factory reset)"
 echo "4. fastboot reboot"
 echo " "
-

@@ -69,25 +69,25 @@ show_gsi_menu() {
 auto_detect() {
     echo "🔍 Auto-detecting files..."
     
-    if [ -f ""$uka"/super.img.lz4" ]; then
+    if [ -f "$uka/super.img.lz4" ]; then
         echo "📱 Samsung OneUI detected"
         return 1
-    elif [ -f ""$uka"/erofs.img.lz4" ]; then
+    elif [ -f "$uka/erofs.img.lz4" ]; then
         echo "📱 Samsung OneUI EROFS detected"
         return 2
     elif ls "$uka"/*.xml.zip 1> /dev/null 2>&1; then
         echo "📱 Motorola MotoUI Global detected"
         return 3
-    elif [ -f ""$uka"/super.img_sparsechunk.1" ]; then
+    elif [ -f "$uka/super.img_sparsechunk.1" ]; then
         echo "📱 Motorola MotoUI CN detected"
         return 4
     elif ls "$uka"/*.0.zip 1> /dev/null 2>&1; then
         echo "📱 Xiaomi MIUI detected"
         return 5
-    elif [ -f ""$uka"/realme.bin" ]; then
+    elif [ -f "$uka/realme.bin" ]; then
         echo "📱 Realme RealmeUI detected"
         return 6
-    elif [ -f ""$uka"/system.img" ] || [ -f ""$uka"/payload.bin" ]; then
+    elif [ -f "$uka/system.img" ] || [ -f "$uka/payload.bin" ]; then
         echo "🎯 Pixel/GSI image detected"
         return 7
     else
