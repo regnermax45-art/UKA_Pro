@@ -1,6 +1,6 @@
-id=UKA
-name=Unpacker Kitchen for Android (UKA)
-version=V5.12
-versionCode=512
-author=ColdWindScholar
-description=Kitchen for unpacking, assembling and converting ROM files
+id=UKA_Pro_Enhanced
+name=UKA Pro Enhanced + UKA Lite + Pixel GSI
+version=v2.0
+versionCode=20241018
+author=ColdWindScholar + regnermax45-art + cryzuezin
+description=Enhanced Unpacker Kitchen for Android with UKA_lite integration and Pixel 7 Pro GSI porting capabilities. Supports Samsung, Motorola, Xiaomi, Google, Realme firmware unpacking and GSI modification.

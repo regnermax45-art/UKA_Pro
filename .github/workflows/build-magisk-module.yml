@@ -1,0 +1,278 @@
+name: Build UKA_Pro Magisk Module
+
+on:
+  push:
+    branches: [ master, main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+        - release
+        - debug
+      include_pixel_tools:
+        description: 'Include Pixel 7 Pro tools'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  MODULE_NAME: UKA_Pro_Enhanced
+  VERSION_CODE: 20241018
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          zip unzip p7zip-full \
+          android-tools-adb android-tools-fastboot \
+          python3-pip python3-dev \
+          build-essential \
+          rsync \
+          file \
+          tree
+        
+        # Install Python dependencies
+        pip3 install --upgrade pip
+        pip3 install protobuf construct
+
+    - name: Set build variables
+      run: |
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          VERSION="${{ github.ref_name }}"
+          BUILD_TYPE="release"
+        else
+          VERSION="v$(date +'%Y%m%d')-$(echo ${{ github.sha }} | cut -c1-7)"
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+        fi
+        
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "BUILD_TYPE=$BUILD_TYPE" >> $GITHUB_ENV
+        echo "BUILD_DATE=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_ENV
+
+    - name: Prepare build environment
+      run: |
+        echo "🔧 Preparing UKA_Pro build environment..."
+        
+        # Create build directory
+        mkdir -p build/module
+        
+        # Copy module files
+        cp -r META-INF build/module/
+        cp -r bin build/module/
+        cp -r python build/module/
+        cp -r local build/module/
+        cp module.prop build/module/
+        cp install.sh build/module/
+        cp uninstall.sh build/module/
+        cp uka_main.sh build/module/
+        
+        # Copy AIK if exists
+        if [ -f aik.tar.xz ]; then
+          cp aik.tar.xz build/module/
+        fi
+
+    - name: Update module properties
+      run: |
+        cd build/module
+        
+        # Update module.prop with build info
+        sed -i "s/version=.*/version=$VERSION/" module.prop
+        sed -i "s/versionCode=.*/versionCode=$VERSION_CODE/" module.prop
+        
+        # Add build info
+        echo "" >> module.prop
+        echo "# Build Information" >> module.prop
+        echo "buildDate=$BUILD_DATE" >> module.prop
+        echo "buildType=$BUILD_TYPE" >> module.prop
+        echo "gitCommit=${{ github.sha }}" >> module.prop
+        echo "pixelSupport=true" >> module.prop
+
+    - name: Validate module structure
+      run: |
+        cd build/module
+        echo "📋 Module structure:"
+        tree -a -L 3
+        
+        echo "📄 Module properties:"
+        cat module.prop
+        
+        echo "🔍 Validating required files..."
+        required_files=(
+          "META-INF/com/google/android/updater-script"
+          "META-INF/com/google/android/update-binary"
+          "module.prop"
+          "install.sh"
+          "bin/unpack/pixel_gsi.sh"
+          "bin/debloat/pixel_debloat.sh"
+        )
+        
+        for file in "${required_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file"
+          else
+            echo "❌ Missing: $file"
+            exit 1
+          fi
+        done
+
+    - name: Set executable permissions
+      run: |
+        cd build/module
+        find . -name "*.sh" -exec chmod +x {} \;
+        find bin/ -type f -exec chmod +x {} \; 2>/dev/null || true
+        chmod +x META-INF/com/google/android/update-binary
+
+    - name: Test Pixel 7 Pro GSI script
+      if: ${{ github.event.inputs.include_pixel_tools != 'false' }}
+      run: |
+        cd build/module
+        echo "🧪 Testing Pixel 7 Pro GSI script..."
+        
+        # Create test environment
+        mkdir -p test_env
+        cd test_env
+        
+        # Test script syntax
+        bash -n ../bin/unpack/pixel_gsi.sh
+        bash -n ../bin/debloat/pixel_debloat.sh
+        bash -n ../uka_main.sh
+        
+        echo "✅ All scripts passed syntax check"
+
+    - name: Create Magisk module ZIP
+      run: |
+        cd build
+        
+        # Create the module ZIP
+        MODULE_ZIP="${MODULE_NAME}_${VERSION}_${BUILD_TYPE}.zip"
+        echo "📦 Creating: $MODULE_ZIP"
+        
+        cd module
+        zip -r "../$MODULE_ZIP" . -x "*.git*" "test_env/*"
+        
+        cd ..
+        echo "MODULE_ZIP=$MODULE_ZIP" >> $GITHUB_ENV
+        
+        # Verify ZIP contents
+        echo "📋 ZIP contents:"
+        unzip -l "$MODULE_ZIP" | head -20
+
+    - name: Generate checksums
+      run: |
+        cd build
+        
+        # Generate checksums
+        sha256sum "$MODULE_ZIP" > "${MODULE_ZIP}.sha256"
+        md5sum "$MODULE_ZIP" > "${MODULE_ZIP}.md5"
+        
+        echo "🔐 Checksums generated:"
+        cat "${MODULE_ZIP}.sha256"
+        cat "${MODULE_ZIP}.md5"
+
+    - name: Create release notes
+      run: |
+        cat > build/RELEASE_NOTES.md << EOF
+        # UKA_Pro Enhanced - $VERSION
+        
+        ## 🚀 Features
+        - **UKA_Pro + UKA_lite Integration**: Combined the best of both tools
+        - **Pixel 7 Pro GSI Support**: Specialized GSI porting for Pixel 7 Pro (cheetah)
+        - **Multi-OEM Support**: Samsung, Motorola, Xiaomi, Google, Realme
+        - **Advanced Debloating**: Pixel-optimized app removal
+        - **PHH Treble Integration**: Enhanced GSI compatibility
+        
+        ## 📱 Supported Devices
+        - **Primary**: Google Pixel 7 Pro (cheetah)
+        - **Secondary**: All Treble-compatible devices
+        
+        ## 🔧 Supported Formats
+        - Samsung OneUI (super.img.lz4, erofs.img.lz4)
+        - Motorola MotoUI (*.xml.zip, sparsechunk)
+        - Xiaomi MIUI (*.12.0.zip, *.13.0.zip)
+        - Realme RealmeUI (payload.bin → realme.bin)
+        - Google Pixel (payload.bin, system.img)
+        
+        ## 📦 Installation
+        1. Flash via Magisk Manager
+        2. Reboot device
+        3. Access via terminal: \`uka_main.sh\`
+        
+        ## 🛠️ Build Information
+        - **Version**: $VERSION
+        - **Build Date**: $BUILD_DATE
+        - **Build Type**: $BUILD_TYPE
+        - **Commit**: ${{ github.sha }}
+        
+        ## 📋 Changelog
+        - Merged UKA_lite functionality
+        - Added Pixel 7 Pro GSI porting
+        - Enhanced debloating system
+        - Improved auto-detection
+        - Added GitHub Actions CI/CD
+        EOF
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: UKA_Pro_Enhanced_${{ env.BUILD_TYPE }}_${{ env.BUILD_DATE }}
+        path: |
+          build/*.zip
+          build/*.sha256
+          build/*.md5
+          build/RELEASE_NOTES.md
+        retention-days: 30
+
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          build/${{ env.MODULE_ZIP }}
+          build/${{ env.MODULE_ZIP }}.sha256
+          build/${{ env.MODULE_ZIP }}.md5
+        body_path: build/RELEASE_NOTES.md
+        draft: false
+        prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build summary
+      run: |
+        echo "## 🎉 Build Completed Successfully!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "- **Module**: \`$MODULE_ZIP\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: \`$VERSION\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build Type**: \`$BUILD_TYPE\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Size**: \`$(du -h build/$MODULE_ZIP | cut -f1)\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🎯 Features" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ UKA_Pro + UKA_lite merged" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Pixel 7 Pro GSI support" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Multi-OEM compatibility" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Advanced debloating" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Automated CI/CD" >> $GITHUB_STEP_SUMMARY
+
