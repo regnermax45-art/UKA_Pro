@@ -1,3 +1,4 @@
+#!/bin/bash
 SKIPMOUNT=false
 
 # Set to true if you need to load system.prop
@@ -34,9 +35,9 @@ sys_mount=/system
 
 is_mounted() {
 if [ ! -z "$2" ]; then
-cat /proc/mounts | grep -e $1 | grep -e $2 >/dev/null
+cat /proc/mounts | grep -e "$1" | grep -e "$2" >/dev/null
 else
-cat /proc/mounts | grep -e $1 >/dev/null
+cat /proc/mounts | grep -e "$1" >/dev/null
 fi
 return $?
 }

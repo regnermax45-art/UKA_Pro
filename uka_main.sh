@@ -14,10 +14,10 @@ debloat="$uka"/bin/debloat
 phh="$uka"/bin/phh
 unpack="$uka"/bin/unpack
 
-chmod -R 755 $uka
-rm -rf $tmp
-rm -rf $editor
-mkdir -p $tmp
+chmod -R 755 "$uka"
+rm -rf "$tmp"
+rm -rf "$editor"
+mkdir -p "$tmp"
 mkdir -p $editor
 
 clear
@@ -215,4 +215,3 @@ echo -en "\E[32;1m"
 echo "✅ UKA_Pro operation completed!"
 echo -en "\E[37;1m"
 echo " "
-
