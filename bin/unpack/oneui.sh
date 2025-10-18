@@ -1,45 +1,44 @@
-#!/system/bin/sh
+#!/bin/bash
 
 #PATH
-ajax=`pwd`
-uka=`pwd`
+ajax=$(pwd)
+uka=$(pwd)
 #BIN
-bin=$uka/bin/arm
-bb=$bin/busybox
-tmp=$uka/bin/tmp
-pybin=$uka/bin/python
-editor=$uka/editor
-debloat=$uka/bin/debloat
-phh=$uka/bin/phh
+bin="$uka"/bin/arm
+tmp="$uka"/bin/tmp
+pybin="$uka"/bin/python
+editor="$uka"/editor
+debloat="$uka"/bin/debloat
+phh="$uka"/bin/phh
 
 echo "Detected Model: Samsung"
 echo " "
 
 echo "- LZ4 to IMG Conversion.."
-lz4 -df --no-sparse $ajax/super.img.lz4
-lz4 -df --no-sparse $ajax/prism.img.lz4
-lz4 -df --no-sparse $ajax/optics.img.lz4
+lz4 -df --no-sparse "$ajax"/super.img.lz4
+lz4 -df --no-sparse "$ajax"/prism.img.lz4
+lz4 -df --no-sparse "$ajax"/optics.img.lz4
 echo " "
 
 echo "- Conversion Super Partition to RAW.."
-$bin/simg2img $ajax/super.img $tmp/super_raw.img
-rm -rf $ajax/super.img
+"$bin"/simg2img "$ajax"/super.img "$tmp"/super_raw.img
+rm -rf "$ajax"/super.img
 echo " "
 
 echo "- Extracting the Images from the Super Partition.."
-$bin/lpunpack $tmp/super_raw.img $tmp
-rm -rf $tmp/super_raw.img
+"$bin"/lpunpack "$tmp"/super_raw.img $tmp
+rm -rf "$tmp"/super_raw.img
 echo " "
 
 echo "- Removing Unnecessary Images.."
-rm -rf $tmp/odm.img
+rm -rf "$tmp"/odm.img
 echo " "
 
-python3 $pybin/imgextractor.py $tmp/system.img $editor
-full_avb=$($bin/avbtool info_image --image $tmp/system.img 2> $editor/config/system/system_avb.log)
+python3 $pybin/imgextractor.py "$tmp"/system.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$tmp"/system.img 2> $editor/config/system/system_avb.log)
 echo $full_avb > $editor/config/system/system_avb.img
 rm -rf $editor/config/system/system_avb.img
-rm -rf $tmp/system.img
+rm -rf "$tmp"/system.img
 sed -i "s+system/system/product 0 0 0644 /product+system/product 0 0 0644 /system/product+" $editor/config/system/system_fs_config
 sed -i "s+system/product 0 0 0755+system/system/product 0 0 0755+" $editor/config/system/system_fs_config
 rm -rf $editor/system/cache && cd $editor/system && mkdir cache
@@ -116,11 +115,11 @@ cat $phh/fix.prop >> $editor/system/system/build.prop
 cat $phh/phh_file_contexts >> $editor/config/system/system_file_contexts
 echo " "
 
-python3 $pybin/imgextractor.py $tmp/product.img $editor
-full_avb=$($bin/avbtool info_image --image $tmp/product.img 2> $editor/config/product/product_avb.log)
+python3 $pybin/imgextractor.py "$tmp"/product.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$tmp"/product.img 2> $editor/config/product/product_avb.log)
 echo $full_avb > $editor/config/product/product_avb.img
 rm -rf $editor/config/product/product_avb.img
-rm -rf $tmp/product.img
+rm -rf "$tmp"/product.img
 sed -i "s+product/+system/system/product/+" $editor/config/product/product_fs_config
 cat $editor/config/product/product_fs_config >> $editor/config/system/system_fs_config
 mv -f $editor/product $editor/system/system
@@ -129,11 +128,11 @@ sed -i "s+ro.product.property_source_order=odm,vendor,product,system_ext,system+
 sed -i "s+persist.sys.usb.config=none+persist.sys.usb.config=adb+" $editor/system/system/product/etc/build.prop
 cat $phh/fix.prop >> $editor/system/system/product/etc/build.prop
 
-python3 $pybin/imgextractor.py $tmp/vendor.img $editor
-full_avb=$($bin/avbtool info_image --image $tmp/vendor.img 2> $editor/config/vendor/vendor_avb.log)
+python3 $pybin/imgextractor.py "$tmp"/vendor.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$tmp"/vendor.img 2> $editor/config/vendor/vendor_avb.log)
 echo $full_avb > $editor/config/vendor/vendor_avb.img
 rm -rf $editor/config/vendor/vendor_avb.img
-rm -rf $tmp/vendor.img
+rm -rf "$tmp"/vendor.img
 sed -i "s+vendor/+system/system/product/+" $editor/config/vendor/vendor_fs_config
 grep ^system/system/product/overlay $editor/config/vendor/vendor_fs_config | grep 0755$ > $editor/config/vendor/vendor_fs_0755_config
 grep ^system/system/product/overlay $editor/config/vendor/vendor_fs_config | grep 0644$ > $editor/config/vendor/vendor_fs_0644_config
@@ -159,22 +158,22 @@ cp -frp $editor/system/system/system_ext/apex/* $editor/system/system/apex
 rm -rf $editor/system/system/system_ext/apex
 echo " "
 
-python3 $pybin/imgextractor.py $ajax/prism.img $editor
-full_avb=$($bin/avbtool info_image --image $ajax/prism.img 2> $editor/config/prism/prism_avb.log)
+python3 $pybin/imgextractor.py "$ajax"/prism.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$ajax"/prism.img 2> $editor/config/prism/prism_avb.log)
 echo $full_avb > $editor/config/prism/prism_avb.img
 rm -rf $editor/config/prism/prism_avb.img
-rm -rf $ajax/prism.raw.img
-rm -rf $ajax/prism.img
+rm -rf "$ajax"/prism.raw.img
+rm -rf "$ajax"/prism.img
 sed -i "s+prism/+system/prism/+" $editor/config/prism/prism_fs_config
 cat $editor/config/prism/prism_fs_config >> $editor/config/system/system_fs_config
 mv -f $editor/prism $editor/system
 
-python3 $pybin/imgextractor.py $ajax/optics.img $editor
-full_avb=$($bin/avbtool info_image --image $ajax/optics.img 2> $editor/config/optics/optics_avb.log)
+python3 $pybin/imgextractor.py "$ajax"/optics.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$ajax"/optics.img 2> $editor/config/optics/optics_avb.log)
 echo $full_avb > $editor/config/optics/optics_avb.img
 rm -rf $editor/config/optics/optics_avb.img
-rm -rf $ajax/optics.raw.img
-rm -rf $ajax/optics.img
+rm -rf "$ajax"/optics.raw.img
+rm -rf "$ajax"/optics.img
 sed -i "s+optics/+system/optics/+" $editor/config/optics/optics_fs_config
 cat $editor/config/optics/optics_fs_config >> $editor/config/system/system_fs_config
 mv -f $editor/optics $editor/system
@@ -196,20 +195,20 @@ echo "- Detected Model: Samsung"
 echo " "
 
 echo "- Repacking system.."
-date=`date +%Y%m%d`
-size1=`du -sb $editor/system | cut -f1`
-space=`expr $size1 + 259912340`
-$bin/make_ext4fs -J -T -1 -S $editor/config/system/system_file_contexts -C $editor/config/system/system_fs_config -l $space -a system $tmp/OneUI-AB-$date-CRYZUEZIN.img $editor/system
+date=$(date +%Y%m%d)
+size1=$(du -sb "$editor"/system | cut -f1)
+space=$((size1 + 259912340))
+"$bin"/make_ext4fs -J -T -1 -S $editor/config/system/system_file_contexts -C $editor/config/system/system_fs_config -l $space -a system "$tmp"/OneUI-AB-$date-CRYZUEZIN.img $editor/system
 echo "system size = $space"
 echo " "
 
 echo "- Compressing the IMG in GZIP.."
-gzip -c $tmp/OneUI-AB-$date-CRYZUEZIN.img > $tmp/OneUI-AB-$date-CRYZUEZIN.img.gz
+gzip -c "$tmp"/OneUI-AB-$date-CRYZUEZIN.img > "$tmp"/OneUI-AB-$date-CRYZUEZIN.img.gz
 rm -rf $editor
 echo " "
 
 echo "- Moving the file to $ajax"
-mv -f $tmp/OneUI-AB-$date-CRYZUEZIN.img.gz $ajax
+mv -f "$tmp"/OneUI-AB-$date-CRYZUEZIN.img.gz $ajax
 rm -rf $tmp
 echo " "
 

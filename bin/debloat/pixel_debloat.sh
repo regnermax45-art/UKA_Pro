@@ -1,4 +1,4 @@
-#!/system/bin/sh
+#!/bin/bash
 
 # Pixel 7 Pro GSI Debloat Script
 # Removes unnecessary apps and services for better performance
@@ -80,7 +80,7 @@ SYSTEM_BLOAT=(
 remove_app() {
     local app_path="$1"
     if [ -d "$app_path" ]; then
-        echo "  Removing: $(basename $app_path)"
+        echo "  Removing: $(basename "$app_path")"
         rm -rf "$app_path"
     fi
 }
@@ -143,16 +143,16 @@ if [ -f "build.prop" ]; then
     sed -i '/ro.config.alarm_alert/d' build.prop
     
     # Add GSI optimizations
-    echo "# GSI Optimizations" >> build.prop
-    echo "ro.treble.enabled=true" >> build.prop
-    echo "ro.vndk.version=33" >> build.prop
-    echo "ro.product.first_api_level=33" >> build.prop
+    {
+        echo "# GSI Optimizations"
+        echo "ro.treble.enabled=true"
+        echo "ro.vndk.version=33"
+        echo "ro.product.first_api_level=33"
+    } >> build.prop
 fi
 
 # Create debloat summary
-REMOVED_COUNT=$(find . -maxdepth 0 -type d | wc -l)
 echo "✅ Debloat completed!"
 echo "📊 Removed unnecessary apps and files"
 echo "💾 Estimated space saved: ~500MB"
 echo "🎯 GSI optimized for Pixel 7 Pro"
-

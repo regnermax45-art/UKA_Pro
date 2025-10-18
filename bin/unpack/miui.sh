@@ -1,73 +1,72 @@
-#!/system/bin/sh
+#!/bin/bash
 
 #PATH
-ajax=`pwd`
-uka=`pwd`
+ajax=$(pwd)
+uka=$(pwd)
 #BIN
-bin=$uka/bin/arm
-bb=$bin/busybox
-tmp=$uka/bin/tmp
-pybin=$uka/bin/python
-editor=$uka/editor
-debloat=$uka/bin/debloat
-phh=$uka/bin/phh
+bin="$uka"/bin/arm
+tmp="$uka"/bin/tmp
+pybin="$uka"/bin/python
+editor="$uka"/editor
+debloat="$uka"/bin/debloat
+phh="$uka"/bin/phh
 
 echo "- Detected Model: Xioami"
 echo " "
 
 echo "- Renaming the file.."
-mv $ajax/*.0.zip $ajax/*.0
+mv "$ajax"/*.0.zip "$ajax"/*.0
 echo " "
 
 echo "- Extracting ZIP.."
-unzip -o $ajax/*.0 -d $tmp
+unzip -o "$ajax"/*.0 -d $tmp
 echo " "
 
 echo "- Extraction system.new.dat.br.."
-$bin/brotli -d $tmp/system.new.dat.br -o $tmp/system.new.dat
-rm -rf $tmp/system.new.dat.br
+"$bin"/brotli -d "$tmp"/system.new.dat.br -o "$tmp"/system.new.dat
+rm -rf "$tmp"/system.new.dat.br
 echo " "
 
 echo "- Extraction system.new.dat.."
-python3 $pybin/sdat2img.py $tmp/system.transfer.list $tmp/system.new.dat $tmp/system.img
-rm -rf $tmp/system.new.dat $tmp/system.transfer.list
+python3 $pybin/sdat2img.py "$tmp"/system.transfer.list "$tmp"/system.new.dat "$tmp"/system.img
+rm -rf "$tmp"/system.new.dat "$tmp"/system.transfer.list
 echo " "
 
 echo "- Extraction product.new.dat.br..."
-$bin/brotli -d $tmp/product.new.dat.br -o $tmp/product.new.dat
-rm -rf $tmp/product.new.dat.br
+"$bin"/brotli -d "$tmp"/product.new.dat.br -o "$tmp"/product.new.dat
+rm -rf "$tmp"/product.new.dat.br
 echo " "
 
 echo "- Extraction product.new.dat.."
-python3 $pybin/sdat2img.py $tmp/product.transfer.list $tmp/product.new.dat $tmp/product.img
-rm -rf $tmp/product.new.dat $tmp/product.transfer.list
+python3 $pybin/sdat2img.py "$tmp"/product.transfer.list "$tmp"/product.new.dat "$tmp"/product.img
+rm -rf "$tmp"/product.new.dat "$tmp"/product.transfer.list
 echo " "
 
 echo "- Extraction system_ext.new.dat.br.."
-$bin/brotli -d $tmp/system_ext.new.dat.br -o $tmp/system_ext.new.dat
-rm -rf $tmp/system_ext.new.dat.br
+"$bin"/brotli -d "$tmp"/system_ext.new.dat.br -o "$tmp"/system_ext.new.dat
+rm -rf "$tmp"/system_ext.new.dat.br
 echo " "
 
 echo "- Extraction system_ext.new.dat.."
-python3 $pybin/sdat2img.py $tmp/system_ext.transfer.list $tmp/system_ext.new.dat $tmp/system_ext.img
-rm -rf $tmp/system_ext.new.dat $tmp/system_ext.transfer.list
+python3 $pybin/sdat2img.py "$tmp"/system_ext.transfer.list "$tmp"/system_ext.new.dat "$tmp"/system_ext.img
+rm -rf "$tmp"/system_ext.new.dat "$tmp"/system_ext.transfer.list
 echo " "
 
 echo "- Extraction vendor.new.dat.br.."
-$bin/brotli -d $tmp/vendor.new.dat.br -o $tmp/vendor.new.dat
-rm -rf $tmp/vendor.new.dat.br
+"$bin"/brotli -d "$tmp"/vendor.new.dat.br -o "$tmp"/vendor.new.dat
+rm -rf "$tmp"/vendor.new.dat.br
 echo " "
 
 echo "- Extraction vendor.new.dat.."
-python3 $pybin/sdat2img.py $tmp/vendor.transfer.list $tmp/vendor.new.dat $tmp/vendor.img
-rm -rf $tmp/vendor.new.dat $tmp/vendor.transfer.list
+python3 $pybin/sdat2img.py "$tmp"/vendor.transfer.list "$tmp"/vendor.new.dat "$tmp"/vendor.img
+rm -rf "$tmp"/vendor.new.dat "$tmp"/vendor.transfer.list
 echo " "
 
-python3 $pybin/imgextractor.py $tmp/system.img $editor
-full_avb=$($bin/avbtool info_image --image $tmp/system.img 2> $editor/config/system/system_avb.log)
+python3 $pybin/imgextractor.py "$tmp"/system.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$tmp"/system.img 2> $editor/config/system/system_avb.log)
 echo $full_avb > $editor/config/system/system_avb.img
 rm -rf $editor/config/system/system_avb.img
-rm -rf $tmp/system.img
+rm -rf "$tmp"/system.img
 sed -i "s+system/system/product 0 0 0644 /product+system/product 0 0 0644 /system/product+" $editor/config/system/system_fs_config
 sed -i "s+system/product 0 0 0755+system/system/product 0 0 0755+" $editor/config/system/system_fs_config
 sed -i "s+system/system/system_ext 0 0 0644 /system_ext+system/system_ext 0 0 0644 /system/system_ext+" $editor/config/system/system_fs_config
@@ -149,11 +148,11 @@ cat $phh/fix.prop >> $editor/system/system/build.prop
 cat $phh/phh_file_contexts >> $editor/config/system/system_file_contexts
 echo " "
 
-python3 $pybin/imgextractor.py $tmp/product.img $editor
-full_avb=$($bin/avbtool info_image --image $tmp/product.img 2> $editor/config/product/product_avb.log)
+python3 $pybin/imgextractor.py "$tmp"/product.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$tmp"/product.img 2> $editor/config/product/product_avb.log)
 echo $full_avb > $editor/config/product/product_avb.img
 rm -rf $editor/config/product/product_avb.img
-rm -rf $tmp/product.img
+rm -rf "$tmp"/product.img
 sed -i "s+product/+system/system/product/+" $editor/config/product/product_fs_config
 cat $editor/config/product/product_fs_config >> $editor/config/system/system_fs_config
 mv -f $editor/product $editor/system/system
@@ -162,20 +161,20 @@ sed -i "s+ro.product.property_source_order=odm,vendor,product,system_ext,system+
 sed -i "s+persist.sys.usb.config=none+persist.sys.usb.config=adb+" $editor/system/system/product/etc/build.prop
 cat $phh/fix.prop >> $editor/system/system/product/etc/build.prop
 
-python3 $pybin/imgextractor.py $tmp/system_ext.img $editor
-full_avb=$($bin/avbtool info_image --image $tmp/system_ext.img 2> $editor/config/system_ext/system_ext_avb.log)
+python3 $pybin/imgextractor.py "$tmp"/system_ext.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$tmp"/system_ext.img 2> $editor/config/system_ext/system_ext_avb.log)
 echo $full_avb > $editor/config/system_ext/system_ext_avb.img
 rm -rf $editor/config/system_ext/system_ext_avb.img
-rm -rf $tmp/system_ext.img
+rm -rf "$tmp"/system_ext.img
 sed -i "s+system_ext/+system/system/system_ext/+" $editor/config/system_ext/system_ext_fs_config
 cat $editor/config/system_ext/system_ext_fs_config >> $editor/config/system/system_fs_config
 mv -f $editor/system_ext $editor/system/system
 
-python3 $pybin/imgextractor.py $tmp/vendor.img $editor
-full_avb=$($bin/avbtool info_image --image $tmp/vendor.img 2> $editor/config/vendor/vendor_avb.log)
+python3 $pybin/imgextractor.py "$tmp"/vendor.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$tmp"/vendor.img 2> $editor/config/vendor/vendor_avb.log)
 echo $full_avb > $editor/config/vendor/vendor_avb.img
 rm -rf $editor/config/vendor/vendor_avb.img
-rm -rf $tmp/vendor.img
+rm -rf "$tmp"/vendor.img
 rm -rf $tmp
 mkdir -p $tmp
 sed -i "s+vendor/+system/system/product/+" $editor/config/vendor/vendor_fs_config
@@ -221,17 +220,17 @@ echo "- Repacking system.."
 date=`date +%Y%m%d`
 size1=`du -sb $editor/system | cut -f1`
 space=`expr $size1 + 259912340`
-$bin/make_ext4fs -J -T -1 -S $editor/config/system/system_file_contexts -C $editor/config/system/system_fs_config -l $space -a system $tmp/MIUI-AB-$date-CRYZUEZIN.img $editor/system
+"$bin"/make_ext4fs -J -T -1 -S $editor/config/system/system_file_contexts -C $editor/config/system/system_fs_config -l $space -a system "$tmp"/MIUI-AB-$date-CRYZUEZIN.img $editor/system
 echo "system size = $space"
 echo " "
 
 echo "- Compressing the IMG in GZIP.."
-gzip -c $tmp/MIUI-AB-$date-CRYZUEZIN.img > $tmp/MIUI-AB-$date-CRYZUEZIN.img.gz
+gzip -c "$tmp"/MIUI-AB-$date-CRYZUEZIN.img > "$tmp"/MIUI-AB-$date-CRYZUEZIN.img.gz
 rm -rf $editor
 echo " "
 
 echo "- Moving the file to $ajax"
-mv -f $tmp/MIUI-AB-$date-CRYZUEZIN.img.gz $ajax
+mv -f "$tmp"/MIUI-AB-$date-CRYZUEZIN.img.gz $ajax
 rm -rf $tmp
 echo " "
 

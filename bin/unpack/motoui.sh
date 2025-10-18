@@ -1,29 +1,29 @@
-#!/system/bin/sh
+#!/bin/bash
 
 #PATH
-ajax=`pwd`
-uka=`pwd`
+ajax=$(pwd)
+uka=$(pwd)
 #BIN
-bin=$uka/bin/arm
-tmp=$uka/bin/tmp
-pybin=$uka/bin/python
-editor=$uka/editor
-debloat=$uka/bin/debloat
-contexts=$uka/bin/contexts
-config=$uka/bin/config
-phh=$uka/bin/phh
+bin="$uka"/bin/arm
+tmp="$uka"/bin/tmp
+pybin="$uka"/bin/python
+editor="$uka"/editor
+debloat="$uka"/bin/debloat
+contexts="$uka"/bin/contexts
+config="$uka"/bin/config
+phh="$uka"/bin/phh
 
-if [ -f $ajax/*.xml.zip ]; then
+if [ -f "$ajax"/*.xml.zip ]; then
 # MotoUI Global (12.0)
 echo "- Detected Model: Motorola"
 echo " "
 
 echo "- Renaming the file.."
-mv $ajax/*.xml.zip $ajax/*.xml
+mv "$ajax"/*.xml.zip "$ajax"/*.xml
 echo " "
 
 echo "- Extracting ZIP.."
-unzip -o $ajax/*.xml -d $tmp
+unzip -o "$ajax"/*.xml -d $tmp
 echo " "
 
 echo "- Conversion sparsechunk.* to super.img.."
@@ -33,7 +33,7 @@ name2=$(find . -maxdepth 1 -name "super*chunk*" | sort -n | grep "[0-9][0-9]")
 echo " "
 
 echo "- Gluing super_raw.img.."
-$bin/simg2img ${name1} ${name2} $tmp/super_raw.img
+"$bin"/simg2img ${name1} ${name2} "$tmp"/super_raw.img
 echo " "
 else
 # MotoUI CN (12.0)
@@ -47,24 +47,24 @@ name2=$(find . -maxdepth 1 -name "super*chunk*" | sort -n | grep "[0-9][0-9]")
 echo " "
 
 echo "- Gluing super_raw.img.."
-$bin/simg2img ${name1} ${name2} $tmp/super_raw.img
+"$bin"/simg2img ${name1} ${name2} "$tmp"/super_raw.img
 echo " "
 fi
 
 echo "- Extracting the Images from the Super Partition.."
-$bin/lpunpack $tmp/super_raw.img $tmp
-rm -rf $tmp/super_raw.img
+"$bin"/lpunpack "$tmp"/super_raw.img $tmp
+rm -rf "$tmp"/super_raw.img
 echo " "
 
 echo "- Merging Motorola Images, to the ideal format.."
 cd $tmp && mv product_a.img product.img && rm product_b.img && mv system_a.img system.img && rm system_b.img && mv system_ext_a.img system_ext.img && rm system_ext_b.img && mv vendor_a.img vendor.img && rm vendor_b.img
 echo " "
 
-python3 $pybin/imgextractor.py $tmp/system.img $editor
-full_avb=$($bin/avbtool info_image --image $tmp/system.img 2> $editor/config/system/system_avb.log)
+python3 $pybin/imgextractor.py "$tmp"/system.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$tmp"/system.img 2> $editor/config/system/system_avb.log)
 echo $full_avb > $editor/config/system/system_avb.img
 rm -rf $editor/config/system/system_avb.img
-rm -rf $tmp/system.img
+rm -rf "$tmp"/system.img
 sed -i "s+system/system/product 0 0 0644 /product+system/product 0 0 0644 /system/product+" $editor/config/system/system_fs_config
 sed -i "s+system/product 0 0 0755+system/system/product 0 0 0755+" $editor/config/system/system_fs_config
 sed -i "s+system/system/system_ext 0 0 0644 /system_ext+system/system_ext 0 0 0644 /system/system_ext+" $editor/config/system/system_fs_config
@@ -146,11 +146,11 @@ cat $phh/fix.prop >> $editor/system/system/build.prop
 cat $phh/phh_file_contexts >> $editor/config/system/system_file_contexts
 echo " "
 
-python3 $pybin/imgextractor.py $tmp/product.img $editor
-full_avb=$($bin/avbtool info_image --image $tmp/product.img 2> $editor/config/product/product_avb.log)
+python3 $pybin/imgextractor.py "$tmp"/product.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$tmp"/product.img 2> $editor/config/product/product_avb.log)
 echo $full_avb > $editor/config/product/product_avb.img
 rm -rf $editor/config/product/product_avb.img
-rm -rf $tmp/product.img
+rm -rf "$tmp"/product.img
 sed -i "s+product/+system/system/product/+" $editor/config/product/product_fs_config
 cat $editor/config/product/product_fs_config >> $editor/config/system/system_fs_config
 mv -f $editor/product $editor/system/system
@@ -159,20 +159,20 @@ sed -i "s+ro.product.property_source_order=odm,vendor,product,system_ext,system+
 sed -i "s+persist.sys.usb.config=none+persist.sys.usb.config=adb+" $editor/system/system/product/etc/build.prop
 cat $phh/fix.prop >> $editor/system/system/product/etc/build.prop
 
-python3 $pybin/imgextractor.py $tmp/system_ext.img $editor
-full_avb=$($bin/avbtool info_image --image $tmp/system_ext.img 2> $editor/config/system_ext/system_ext_avb.log)
+python3 $pybin/imgextractor.py "$tmp"/system_ext.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$tmp"/system_ext.img 2> $editor/config/system_ext/system_ext_avb.log)
 echo $full_avb > $editor/config/system_ext/system_ext_avb.img
 rm -rf $editor/config/system_ext/system_ext_avb.img
-rm -rf $tmp/system_ext.img
+rm -rf "$tmp"/system_ext.img
 sed -i "s+system_ext/+system/system/system_ext/+" $editor/config/system_ext/system_ext_fs_config
 cat $editor/config/system_ext/system_ext_fs_config >> $editor/config/system/system_fs_config
 mv -f $editor/system_ext $editor/system/system
 
-python3 $pybin/imgextractor.py $tmp/vendor.img $editor
-full_avb=$($bin/avbtool info_image --image $tmp/vendor.img 2> $editor/config/vendor/vendor_avb.log)
+python3 $pybin/imgextractor.py "$tmp"/vendor.img $editor
+full_avb=$("$bin"/avbtool info_image --image "$tmp"/vendor.img 2> $editor/config/vendor/vendor_avb.log)
 echo $full_avb > $editor/config/vendor/vendor_avb.img
 rm -rf $editor/config/vendor/vendor_avb.img
-rm -rf $tmp/vendor.img
+rm -rf "$tmp"/vendor.img
 rm -rf $tmp
 mkdir -p $tmp
 sed -i "s+vendor/+system/system/product/+" $editor/config/vendor/vendor_fs_config
@@ -224,18 +224,18 @@ echo "- Repacking system.."
 date=`date +%Y%m%d`
 size1=`du -sb $editor/system | cut -f1`
 space=`expr $size1 + 259912340`
-$bin/make_ext4fs -J -T -1 -S $editor/config/system/system_file_contexts -C $editor/config/system/system_fs_config -l $space -a system $tmp/MotoUI-AB-$date-CRYZUEZIN.img $editor/system
+"$bin"/make_ext4fs -J -T -1 -S $editor/config/system/system_file_contexts -C $editor/config/system/system_fs_config -l $space -a system "$tmp"/MotoUI-AB-$date-CRYZUEZIN.img $editor/system
 echo "system size = $space"
 
 echo " "
 echo "- Compressing the IMG in GZIP.."
-gzip -c $tmp/MotoUI-AB-$date-CRYZUEZIN.img > $tmp/MotoUI-AB-$date-CRYZUEZIN.img.gz
-rm -rf $tmp/MotoUI-AB-$date-CRYZUEZIN.img
+gzip -c "$tmp"/MotoUI-AB-$date-CRYZUEZIN.img > "$tmp"/MotoUI-AB-$date-CRYZUEZIN.img.gz
+rm -rf "$tmp"/MotoUI-AB-$date-CRYZUEZIN.img
 rm -rf $editor
 echo " "
 
 echo "- Moving the file to $ajax"
-mv -f $tmp/MotoUI-AB-$date-CRYZUEZIN.img.gz $ajax
+mv -f "$tmp"/MotoUI-AB-$date-CRYZUEZIN.img.gz $ajax
 rm -rf $tmp
 echo " "
 

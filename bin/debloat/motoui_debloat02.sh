@@ -1,3 +1,4 @@
+#!/bin/bash
 rm -rf bin/update_engine
 rm -rf bin/update_verifier
 rm -rf etc/init/cppreopts.rc
