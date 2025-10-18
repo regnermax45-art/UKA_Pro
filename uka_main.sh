@@ -1,18 +1,34 @@
-#!/bin/bash
+#!/system/bin/sh
 
-# UKA_Pro Main Script
+# UKA_Pro Enhanced Main Script
 # Unified Unpacker Kitchen for Android with UKA_lite integration
 # Enhanced with Pixel 7 Pro GSI porting capabilities
 
-# Environment setup
-uka=$(pwd)
-bin="$uka"/bin/arm
-tmp="$uka"/bin/tmp
-pybin="$uka"/bin/python
-editor="$uka"/editor
-debloat="$uka"/bin/debloat
-phh="$uka"/bin/phh
-unpack="$uka"/bin/unpack
+# Environment setup - Fixed installation path
+uka="/data/local/uka_pro"
+bin="$uka/bin/arm"
+bb="$bin/busybox"
+tmp="$uka/tmp"
+pybin="$uka/python"
+editor="$uka/editor"
+debloat="$uka/bin/debloat"
+phh="$uka/bin/phh"
+unpack="$uka/bin/unpack"
+
+# Ensure we're in the correct directory
+cd "$uka" || {
+    echo "❌ Error: UKA_Pro installation not found at $uka"
+    echo "Please reinstall the UKA_Pro Enhanced module"
+    exit 1
+}
+
+# Verify installation
+if [ ! -f "$uka/uka_main.sh" ]; then
+    echo "❌ Error: UKA_Pro Enhanced not properly installed"
+    echo "Expected location: $uka"
+    echo "Please reinstall the module"
+    exit 1
+fi
 
 chmod -R 755 "$uka"
 rm -rf "$tmp"

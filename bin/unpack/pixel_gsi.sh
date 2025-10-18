@@ -5,13 +5,14 @@
 # Part of UKA_Pro with UKA_lite integration
 
 # Environment setup
-uka=$(pwd)
-bin="$uka"/bin/arm
-tmp="$uka"/bin/tmp
-pybin="$uka"/bin/python
-editor="$uka"/editor
-debloat="$uka"/bin/debloat
-phh="$uka"/bin/phh
+uka="/data/local/uka_pro"
+bin="$uka/bin/arm"
+bb="$bin/busybox"
+tmp="$uka/tmp"
+pybin="$uka/python"
+editor="$uka/editor"
+debloat="$uka/bin/debloat"
+phh="$uka/bin/phh"
 
 # Pixel 7 Pro specific variables
 export DEVICE_CODENAME="cheetah"

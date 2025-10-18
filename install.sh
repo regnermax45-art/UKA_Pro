@@ -1,107 +1,218 @@
-#!/bin/bash
+#!/system/bin/sh
+
+##########################################################################################
+# UKA_Pro Enhanced Installation Script
+# Enhanced Unpacker Kitchen for Android with UKA_lite Integration + Pixel 7 Pro GSI
+##########################################################################################
+
 SKIPMOUNT=false
-
-# Set to true if you need to load system.prop
 PROPFILE=false
-
-# Set to true if you need post-fs-data script
 POSTFSDATA=false
-
-# Set to true if you need late_start service script
 LATESTARTSERVICE=false
-
-REPLACE_EXAMPLE="
-/system/app/Youtube
-/system/priv-app/SystemUI
-/system/priv-app/Settings
-/system/framework
-"
-
 REPLACE=""
 
+# Installation paths
+UKA_DIR="/data/local/uka_pro"
+BIN_DIR="$UKA_DIR/bin"
+PYTHON_DIR="$UKA_DIR/python"
+
+##########################################################################################
+# Print module name
+##########################################################################################
 print_modname() {
-ui_print " "
-ui_print "*********************"
-ui_print "- Установка UKA"
-ui_print "*********************"
-ui_print " "
+  ui_print " "
+  ui_print "***********************************"
+  ui_print "  UKA_Pro Enhanced Installation"
+  ui_print "***********************************"
+  ui_print "- UKA_Pro + UKA_lite Integration"
+  ui_print "- Pixel 7 Pro GSI Support"
+  ui_print "- Multi-OEM Compatibility"
+  ui_print "- GitHub Actions CI/CD"
+  ui_print "***********************************"
+  ui_print " "
 }
 
-
+##########################################################################################
+# Installation function
+##########################################################################################
 on_install() {
-ui_print "- Mounting /system, /data, and rootfs"
-
-sys_mount=/system
-
-is_mounted() {
-if [ ! -z "$2" ]; then
-cat /proc/mounts | grep -e "$1" | grep -e "$2" >/dev/null
-else
-cat /proc/mounts | grep -e "$1" >/dev/null
-fi
-return $?
+  ui_print "🔧 Starting UKA_Pro Enhanced installation..."
+  
+  # Check architecture
+  ui_print "📱 Checking device architecture..."
+  ABI=$(getprop ro.product.cpu.abi)
+  case $ABI in
+    arm64-v8a|arm64) 
+      ui_print "✅ ARM64 architecture detected: $ABI"
+      ARCH="arm64"
+      ;;
+    armeabi-v7a|armeabi) 
+      ui_print "⚠️  ARM32 architecture detected: $ABI"
+      ui_print "⚠️  Some features may be limited on 32-bit devices"
+      ARCH="arm"
+      ;;
+    x86_64|x86) 
+      ui_print "❌ x86 architecture not supported: $ABI"
+      abort "❌ This module requires ARM architecture"
+      ;;
+    *) 
+      ui_print "❌ Unknown architecture: $ABI"
+      abort "❌ Unsupported device architecture"
+      ;;
+  esac
+  
+  # Check Android version
+  SDK=$(getprop ro.build.version.sdk)
+  if [ "$SDK" -lt 26 ]; then
+    ui_print "❌ Android version too old (API $SDK)"
+    abort "❌ Requires Android 8.0+ (API 26+)"
+  else
+    ui_print "✅ Android API level: $SDK"
+  fi
+  
+  # Create installation directory
+  ui_print "📁 Creating installation directories..."
+  rm -rf "$UKA_DIR"
+  mkdir -p "$UKA_DIR"
+  mkdir -p "$BIN_DIR"
+  mkdir -p "$PYTHON_DIR"
+  mkdir -p "$UKA_DIR/local"
+  
+  if [ ! -d "$UKA_DIR" ]; then
+    abort "❌ Failed to create installation directory: $UKA_DIR"
+  fi
+  
+  # Copy module files to installation directory
+  ui_print "📦 Installing UKA_Pro Enhanced files..."
+  
+  # Copy main scripts
+  cp -f "$MODPATH/uka_main.sh" "$UKA_DIR/"
+  cp -f "$MODPATH/install.sh" "$UKA_DIR/"
+  cp -f "$MODPATH/uninstall.sh" "$UKA_DIR/"
+  cp -f "$MODPATH/module.prop" "$UKA_DIR/"
+  
+  # Copy binary tools
+  if [ -d "$MODPATH/bin" ]; then
+    cp -rf "$MODPATH/bin"/* "$BIN_DIR/"
+  fi
+  
+  # Copy Python scripts
+  if [ -d "$MODPATH/python" ]; then
+    cp -rf "$MODPATH/python"/* "$PYTHON_DIR/"
+  fi
+  
+  # Copy local files
+  if [ -d "$MODPATH/local" ]; then
+    cp -rf "$MODPATH/local"/* "$UKA_DIR/local/"
+  fi
+  
+  # Extract AIK if present
+  if [ -f "$MODPATH/aik.tar.xz" ]; then
+    ui_print "📦 Extracting Android Image Kitchen..."
+    cd "$UKA_DIR"
+    tar -xf "$MODPATH/aik.tar.xz"
+  fi
+  
+  # Set proper permissions
+  ui_print "🔐 Setting permissions..."
+  chmod -R 755 "$UKA_DIR"
+  chmod +x "$UKA_DIR/uka_main.sh"
+  chmod +x "$UKA_DIR/install.sh"
+  chmod +x "$UKA_DIR/uninstall.sh"
+  
+  # Make all shell scripts executable
+  find "$UKA_DIR" -name "*.sh" -exec chmod +x {} \;
+  
+  # Make binary tools executable
+  if [ -d "$BIN_DIR" ]; then
+    find "$BIN_DIR" -type f -exec chmod +x {} \;
+  fi
+  
+  # Create system bin symlinks for easy access
+  ui_print "🔗 Creating system shortcuts..."
+  mkdir -p "$MODPATH/system/bin"
+  
+  # Create uka_main symlink
+  cat > "$MODPATH/system/bin/uka_main" << 'EOF'
+#!/system/bin/sh
+cd /data/local/uka_pro
+exec ./uka_main.sh "$@"
+EOF
+  
+  # Create uka symlink (shorter alias)
+  cat > "$MODPATH/system/bin/uka" << 'EOF'
+#!/system/bin/sh
+cd /data/local/uka_pro
+exec ./uka_main.sh "$@"
+EOF
+  
+  # Create menu symlink (legacy compatibility)
+  cat > "$MODPATH/system/bin/menu" << 'EOF'
+#!/system/bin/sh
+cd /data/local/uka_pro
+exec ./uka_main.sh "$@"
+EOF
+  
+  chmod +x "$MODPATH/system/bin/uka_main"
+  chmod +x "$MODPATH/system/bin/uka"
+  chmod +x "$MODPATH/system/bin/menu"
+  
+  # Verify installation
+  ui_print "✅ Verifying installation..."
+  
+  required_files=(
+    "$UKA_DIR/uka_main.sh"
+    "$BIN_DIR/unpack/pixel_gsi.sh"
+    "$BIN_DIR/debloat/pixel_debloat.sh"
+    "$PYTHON_DIR/payload_dumper.py"
+  )
+  
+  for file in "${required_files[@]}"; do
+    if [ -f "$file" ]; then
+      ui_print "  ✅ $(basename $file)"
+    else
+      ui_print "  ❌ Missing: $(basename $file)"
+    fi
+  done
+  
+  # Create working directories
+  mkdir -p "$UKA_DIR/tmp"
+  mkdir -p "$UKA_DIR/editor"
+  
+  ui_print " "
+  ui_print "🎉 Installation completed successfully!"
+  ui_print " "
+  ui_print "📋 Usage Instructions:"
+  ui_print "  • Terminal: uka_main (or uka, or menu)"
+  ui_print "  • Direct: cd /data/local/uka_pro && ./uka_main.sh"
+  ui_print " "
+  ui_print "🎯 Pixel 7 Pro GSI Support:"
+  ui_print "  • Place system.img or payload.bin in /data/local/uka_pro"
+  ui_print "  • Run uka_main and select option 7"
+  ui_print " "
+  ui_print "📱 Supported Formats:"
+  ui_print "  • Samsung OneUI (super.img.lz4)"
+  ui_print "  • Motorola MotoUI (*.xml.zip)"
+  ui_print "  • Xiaomi MIUI (*.12.0.zip)"
+  ui_print "  • Realme RealmeUI (realme.bin)"
+  ui_print "  • Google Pixel (payload.bin)"
+  ui_print " "
 }
-moun_t() {
-jo_b="$1";
-if (is_mounted ${jo_b}); then
-mount -o rw,remount ${jo_b}
-else
-mount ${jo_b}
-mount -o rw,remount ${jo_b}
-fi
-}
-moun_t "/"
-if [ -e $sys_mount ]; then
-moun_t $sys_mount
-else
-ui_print " "
-ui_print "Aborting! Failed to find system mountpoint!"
-ui_print " "
-abort
-fi
-if [ -f $sys_mount/build.prop ]; then
-sys_tem="$sys_mount"
-else
-	if [ -f $sys_mount/system/build.prop ]; then
-	sys_tem="$sys_mount/system"
-	else
-	ui_print " "
-	ui_print "Aborting! Failed to find system root!"
-	ui_print " "
-	abort
-	fi
-fi
-ABI=$(cat $sys_tem/build.prop | grep ro.product.cpu.abi= | dd bs=1 skip=19 count=3)
-ABI2=$(cat $sys_tem/build.prop | grep ro.product.cpu.abi2= | dd bs=1 skip=20 count=3)
 
-ARCH=arm
-if [ "$ABI" = "x86" ]; then ui_print "Wrong arch!"; ui_print " "; abort; fi;
-if [ "$ABI2" = "x86" ]; then ui_print "Wrong arch!"; ui_print " "; abort; fi;
-moun_t /data
-touch /data/a_a;
-[ ! -f /data/a_a ] && { ui_print "Aborting!"; ui_print "Failed to read\write '/data' partition!"; abort; }
-rm -rf /data/a_a
-ui_print "- Moving files to /system, /data"
-[ ! -d /data/local ] && mkdir -m 755 -p /data/local
-[ ! -d /data/local ] && { ui_print "Aborting!"; ui_print "Failed to create kitchen directory!"; abort; }
-rm -rf  $MODPATH/*;
-mkdir -p $MODPATH/system;
-[ ! -d $MODPATH/system ] && { ui_print "Aborting!"; ui_print "Failed to create module directory!"; abort; }
-unzip -p "$ZIPFILE" "bin.tar.xz" |tar xJ -C $MODPATH/system
-unzip -o "$ZIPFILE" "uninstall.sh" -d $MODPATH
-unzip -p "$ZIPFILE" "binary.tar.xz" |tar xJ -C /data
-mkdir /data/local/python
-unzip -p "$ZIPFILE" "python.tar.xz" |tar xJ -C /data/local/python
-chmod -R 777 /data/local/python
-unzip -p "$ZIPFILE" "aik.tar.xz" |tar xJ -C /data/local
-ui_print "- Unmounting /system, /data, and rootfs"
-mount -o ro,remount "/"
-mount -o ro,remount "$sys_mount"
-ui_print "- Done !"
-}
-
-
+##########################################################################################
+# Set permissions
+##########################################################################################
 set_permissions() {
-  set_perm_recursive $MODPATH 0 0 0755 0644
-  set_perm_recursive $MODPATH/system/bin 0 0 0755 0755
+  # Module permissions
+  set_perm_recursive "$MODPATH" 0 0 0755 0644
+  set_perm_recursive "$MODPATH/system/bin" 0 0 0755 0755
+  
+  # Installation directory permissions
+  if [ -d "$UKA_DIR" ]; then
+    chown -R 0:0 "$UKA_DIR"
+    chmod -R 755 "$UKA_DIR"
+    find "$UKA_DIR" -name "*.sh" -exec chmod 755 {} \;
+    find "$BIN_DIR" -type f -exec chmod 755 {} \; 2>/dev/null || true
+  fi
 }
+
