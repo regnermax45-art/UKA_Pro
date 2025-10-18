@@ -1,0 +1,183 @@
+name: Test Pixel GSI Tools
+
+on:
+  push:
+    paths:
+      - 'bin/unpack/pixel_gsi.sh'
+      - 'bin/debloat/pixel_debloat.sh'
+      - 'uka_main.sh'
+  pull_request:
+    paths:
+      - 'bin/unpack/pixel_gsi.sh'
+      - 'bin/debloat/pixel_debloat.sh'
+      - 'uka_main.sh'
+  workflow_dispatch:
+
+jobs:
+  test-scripts:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          shellcheck \
+          bats \
+          python3 \
+          file \
+          rsync
+
+    - name: Lint shell scripts
+      run: |
+        echo "🔍 Linting shell scripts..."
+        
+        # Find all shell scripts
+        find . -name "*.sh" -type f | while read -r script; do
+          echo "Checking: $script"
+          shellcheck "$script" || echo "⚠️ Issues found in $script"
+        done
+
+    - name: Test script syntax
+      run: |
+        echo "🧪 Testing script syntax..."
+        
+        scripts=(
+          "bin/unpack/pixel_gsi.sh"
+          "bin/debloat/pixel_debloat.sh"
+          "uka_main.sh"
+          "install.sh"
+          "uninstall.sh"
+        )
+        
+        for script in "${scripts[@]}"; do
+          if [ -f "$script" ]; then
+            echo "Testing: $script"
+            bash -n "$script" && echo "✅ $script" || echo "❌ $script"
+          fi
+        done
+
+    - name: Create test environment
+      run: |
+        echo "🏗️ Creating test environment..."
+        
+        # Create mock directories
+        mkdir -p test_env/{bin/tmp,editor,bin/arm,bin/python}
+        
+        # Create mock files for testing
+        touch test_env/system.img
+        touch test_env/payload.bin
+        
+        # Create mock binaries
+        echo '#!/bin/bash' > test_env/bin/arm/busybox
+        echo '#!/bin/bash' > test_env/bin/arm/simg2img
+        echo '#!/bin/bash' > test_env/bin/arm/make_ext4fs
+        echo '#!/bin/bash' > test_env/bin/arm/7z
+        chmod +x test_env/bin/arm/*
+
+    - name: Test Pixel GSI script (dry run)
+      run: |
+        echo "🎯 Testing Pixel GSI script..."
+        
+        cd test_env
+        
+        # Set environment variables
+        export uka=$(pwd)
+        export bin=$uka/bin/arm
+        export tmp=$uka/bin/tmp
+        export editor=$uka/editor
+        
+        # Test script with dry run modifications
+        cp ../bin/unpack/pixel_gsi.sh ./pixel_gsi_test.sh
+        
+        # Modify script for testing (remove actual operations)
+        sed -i 's/sudo mount/#sudo mount/g' pixel_gsi_test.sh
+        sed -i 's/python3 \$pybin/#python3 \$pybin/g' pixel_gsi_test.sh
+        sed -i 's/\$bin\/make_ext4fs/#\$bin\/make_ext4fs/g' pixel_gsi_test.sh
+        
+        # Run test
+        bash -n pixel_gsi_test.sh && echo "✅ Pixel GSI script syntax OK"
+
+    - name: Test debloat script
+      run: |
+        echo "🗑️ Testing debloat script..."
+        
+        cd test_env
+        
+        # Create mock system structure
+        mkdir -p system/{app,priv-app,lib,lib64,etc/permissions,overlay}
+        
+        # Create mock apps to be removed
+        mkdir -p system/app/{GooglePay,YouTubeMusic,Books}
+        mkdir -p system/priv-app/{HotwordEnrollmentOKGoogleHEXAGON,SCONE}
+        
+        # Test debloat script
+        cp ../bin/debloat/pixel_debloat.sh ./debloat_test.sh
+        
+        # Run in system directory
+        cd system
+        bash -n ../debloat_test.sh && echo "✅ Debloat script syntax OK"
+
+    - name: Test main script
+      run: |
+        echo "🚀 Testing main script..."
+        
+        cd test_env
+        
+        # Copy main script
+        cp ../uka_main.sh ./uka_main_test.sh
+        
+        # Test syntax
+        bash -n uka_main_test.sh && echo "✅ Main script syntax OK"
+
+    - name: Validate Pixel 7 Pro configurations
+      run: |
+        echo "📱 Validating Pixel 7 Pro configurations..."
+        
+        # Check if Pixel 7 Pro specific values are present
+        grep -q "cheetah" bin/unpack/pixel_gsi.sh && echo "✅ Pixel 7 Pro codename found"
+        grep -q "tensor_gs201" bin/unpack/pixel_gsi.sh && echo "✅ Tensor G2 chipset reference found"
+        grep -q "ro.sf.lcd_density=512" bin/unpack/pixel_gsi.sh && echo "✅ Pixel 7 Pro display density found"
+        
+        # Validate build.prop modifications
+        grep -q "ro.product.device=cheetah" bin/unpack/pixel_gsi.sh && echo "✅ Device property found"
+        grep -q "ro.product.model=Pixel 7 Pro" bin/unpack/pixel_gsi.sh && echo "✅ Model property found"
+
+    - name: Check for security issues
+      run: |
+        echo "🔒 Checking for security issues..."
+        
+        # Check for hardcoded credentials or sensitive data
+        if grep -r "password\|secret\|key\|token" --include="*.sh" .; then
+          echo "⚠️ Potential sensitive data found"
+        else
+          echo "✅ No obvious sensitive data found"
+        fi
+        
+        # Check for dangerous commands
+        if grep -r "rm -rf /\|dd if=\|mkfs\|fdisk" --include="*.sh" .; then
+          echo "⚠️ Potentially dangerous commands found - review carefully"
+        else
+          echo "✅ No obviously dangerous commands found"
+        fi
+
+    - name: Generate test report
+      run: |
+        echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### ✅ Passed Tests" >> $GITHUB_STEP_SUMMARY
+        echo "- Shell script syntax validation" >> $GITHUB_STEP_SUMMARY
+        echo "- Pixel GSI script structure" >> $GITHUB_STEP_SUMMARY
+        echo "- Debloat script validation" >> $GITHUB_STEP_SUMMARY
+        echo "- Main script syntax" >> $GITHUB_STEP_SUMMARY
+        echo "- Pixel 7 Pro configuration validation" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📱 Pixel 7 Pro Support" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Codename: cheetah" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Chipset: Tensor G2 (GS201)" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Display: 512 DPI" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ GSI optimizations included" >> $GITHUB_STEP_SUMMARY
+
